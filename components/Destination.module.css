@@ -1,0 +1,211 @@
+/* Paper drifting up into the pale sky the road travelled through. */
+.destination {
+  padding: 72px 24px 40px;
+  text-align: center;
+  color: var(--ink-deep);
+  background: linear-gradient(180deg, var(--paper) 0%, #f1f5fa 45%, #e3ebf5 100%);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-display), serif;
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--gold);
+}
+
+.eyebrow::before,
+.eyebrow::after {
+  content: "";
+  width: 28px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+.heading {
+  font-family: var(--font-serif), serif;
+  font-weight: 700;
+  font-size: clamp(1.7rem, 5vw, 2.4rem);
+  line-height: 1.4;
+  margin-top: 12px;
+}
+
+.label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: #8a6a35;
+}
+
+/* ---------- route ---------- */
+
+.route {
+  max-width: 720px;
+  margin: 56px auto 0;
+}
+
+.stops {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin-top: 22px;
+}
+
+/* stations on a line: a hollow ring, filled once that fork is chosen */
+.stop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-top: 26px;
+}
+
+.stop::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: rgba(22, 52, 92, 0.18);
+}
+
+.stop:first-child::before {
+  left: 50%;
+}
+
+.stop:last-child::before {
+  right: 50%;
+}
+
+.stop::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f6f8fb;
+  border: 1.5px solid rgba(22, 52, 92, 0.3);
+  transform: translateX(-50%);
+}
+
+.stopOn::after {
+  background: var(--ink-deep);
+  border-color: var(--ink-deep);
+  box-shadow: 0 0 0 4px rgba(168, 145, 106, 0.25);
+}
+
+.stopTopic {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  color: #9aa2b1;
+}
+
+.stopPick {
+  font-family: var(--font-serif), serif;
+  font-weight: 700;
+  font-size: 0.98rem;
+  color: #b9bfca;
+}
+
+.stopOn .stopPick {
+  color: var(--ink-deep);
+}
+
+.routeFoot {
+  margin-top: 26px;
+  font-size: 0.88rem;
+  line-height: 1.8;
+  color: #5c6475;
+}
+
+.routeFoot strong {
+  color: var(--ink-deep);
+}
+
+@media (max-width: 560px) {
+  .stops {
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: 22px;
+  }
+
+  .stop:nth-child(2)::before {
+    right: 50%;
+  }
+
+  .stop:nth-child(3)::before {
+    left: 50%;
+  }
+}
+
+/* ---------- actions ---------- */
+
+.ctas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 48px;
+}
+
+.primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: min(100%, 320px);
+  padding: 16px 24px;
+  border-radius: 999px;
+  background: var(--ink-deep);
+  color: var(--paper);
+  font-weight: 600;
+  font-size: 1rem;
+  box-shadow: 0 14px 30px -14px rgba(22, 52, 92, 0.6);
+  transition: background 0.2s ease, gap 0.2s ease;
+}
+
+.primary:hover {
+  background: var(--ink);
+  gap: 14px;
+}
+
+.secondary {
+  font-size: 0.92rem;
+  color: var(--ink-deep);
+  border-bottom: 1px solid rgba(22, 52, 92, 0.3);
+  padding-bottom: 2px;
+  transition: border-color 0.2s ease;
+}
+
+.secondary:hover {
+  border-color: var(--ink-deep);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: 720px;
+  margin: 72px auto 0;
+  padding-top: 24px;
+  border-top: 1px solid rgba(22, 52, 92, 0.1);
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  color: #8792a6;
+}
+
+/* the logo is drawn in white; ink it navy for the light page */
+.footLogo {
+  width: 26px;
+  height: auto;
+  filter: brightness(0.22) sepia(1) hue-rotate(185deg) saturate(3);
+  opacity: 0.75;
+}

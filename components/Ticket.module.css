@@ -1,0 +1,320 @@
+/*
+ * A paper ticket in CSS 3D. It tilts as one flat card under perspective (no
+ * preserve-3d, so every browser hit-tests the buttons on it correctly); the
+ * card's thickness is a stack of drop-shadows that follow the notched mask.
+ * --n1 / --n2 are the notch centres, measured in Ticket.tsx: top and bottom of
+ * the perforation on wide screens, left and right when it stacks on a phone.
+ */
+.stage {
+  --rx: 0deg;
+  --ry: 0deg;
+  --mx: 30%;
+  --my: 20%;
+  --cut: 61%;
+  --n1: var(--cut) 0;
+  --n2: var(--cut) 100%;
+  --notch: 13px;
+  position: relative;
+  max-width: 760px;
+  margin: 48px auto 0;
+  text-align: center;
+}
+
+.float {
+  perspective: 1400px;
+  animation: float 7s ease-in-out infinite;
+}
+
+.ticket {
+  position: relative;
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  /* the card stock's edge, a few paper-thin slices deep */
+  filter: drop-shadow(0 1px 0 #e4d8be) drop-shadow(0 1px 0 #dccfb1) drop-shadow(0 1px 0 #d2c3a2)
+    drop-shadow(0 1.5px 0 #c9b994);
+  transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+  opacity: 0;
+  translate: 0 46px;
+  rotate: x 38deg;
+}
+
+.in .ticket {
+  opacity: 1;
+  translate: 0 0;
+  rotate: x 0deg;
+  transition:
+    transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1),
+    opacity 0.9s ease,
+    translate 1.3s cubic-bezier(0.16, 1, 0.3, 1),
+    rotate 1.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.face {
+  border-radius: 10px;
+  -webkit-mask:
+    radial-gradient(circle var(--notch) at var(--n1), #0000 97%, #000) ,
+    radial-gradient(circle var(--notch) at var(--n2), #0000 97%, #000);
+  -webkit-mask-composite: source-in;
+  mask:
+    radial-gradient(circle var(--notch) at var(--n1), #0000 97%, #000) ,
+    radial-gradient(circle var(--notch) at var(--n2), #0000 97%, #000);
+  mask-composite: intersect;
+}
+
+.face {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--cut) 1fr;
+  overflow: hidden;
+  color: var(--ink-deep);
+  /* cream stock with a fine grain */
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.38 0 0 0 0 0.25 0 0 0 0.09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    linear-gradient(160deg, #fffdf6 0%, #fbf5e7 100%);
+}
+
+/* a gold double rule, inset like a printed invitation */
+.face::before,
+.face::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border-radius: 6px;
+}
+
+.face::before {
+  inset: 9px;
+  border: 1px solid rgba(176, 140, 70, 0.55);
+}
+
+.face::after {
+  inset: 13px;
+  border: 0.5px solid rgba(176, 140, 70, 0.3);
+}
+
+.main,
+.stub {
+  position: relative;
+  padding: 40px 30px 30px;
+}
+
+/* the perforation: a row of punched dots */
+.stub {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-image: radial-gradient(circle, rgba(150, 120, 70, 0.55) 1.3px, transparent 1.6px);
+  background-size: 3px 9px;
+  background-repeat: repeat-y;
+  background-position: 0 4px;
+}
+
+.label {
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #8a6a35, #c9a45e, #8a6a35);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.date {
+  font-family: var(--font-display), serif;
+  font-size: clamp(1.9rem, 5.4vw, 2.6rem);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  margin-top: 14px;
+  /* printed ink, pressed slightly into the stock */
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.time {
+  margin-top: 6px;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  color: #5c6475;
+}
+
+/* a two-way switch: the navy thumb slides under the chosen zone */
+.tz {
+  position: relative;
+  z-index: 1;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 18px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(22, 52, 92, 0.05);
+  box-shadow:
+    inset 0 0 0 1px rgba(176, 140, 70, 0.4),
+    inset 0 1px 2px rgba(22, 52, 92, 0.08);
+}
+
+.tzThumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  border-radius: 999px;
+  background: var(--ink-deep);
+  box-shadow: 0 3px 8px -3px rgba(22, 52, 92, 0.55);
+  transition: transform 0.35s cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+
+.tzRight .tzThumb {
+  transform: translateX(100%);
+}
+
+.tzBtn {
+  position: relative;
+  min-width: 64px;
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: #8a8272;
+  cursor: pointer;
+  transition: color 0.25s ease;
+}
+
+.tzBtn:not(.tzOn):hover {
+  color: var(--ink-deep);
+}
+
+.tzBtn:focus-visible {
+  outline: 2px solid #b08c46;
+  outline-offset: 2px;
+}
+
+.tzOn {
+  color: #fffdf6;
+}
+
+.serial {
+  margin-top: 20px;
+  font-size: 0.6rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: #b3a68c;
+}
+
+.countdown {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.cdCol {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 50px;
+  padding: 0 5px;
+}
+
+.cdCol + .cdCol {
+  border-left: 1px solid rgba(150, 120, 70, 0.22);
+}
+
+.cdValue {
+  font-family: var(--font-display), serif;
+  font-size: 1.85rem;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.cdLabel {
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #a29a8a;
+}
+
+.admit {
+  margin-top: auto;
+  padding-top: 22px;
+  font-family: var(--font-display), serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  color: #b08c46;
+}
+
+/* gold-foil light that slides across as the ticket tilts */
+.sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 90% at var(--mx) var(--my), rgba(255, 255, 255, 0.55), transparent 60%),
+    linear-gradient(
+      115deg,
+      transparent 30%,
+      rgba(255, 236, 190, 0.35) calc(var(--mx) - 6%),
+      rgba(255, 255, 255, 0.5) var(--mx),
+      transparent calc(var(--mx) + 14%)
+    );
+  mix-blend-mode: soft-light;
+}
+
+/* soft contact shadow on the page */
+.shadow {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -28px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(22, 52, 92, 0.28), transparent);
+  filter: blur(8px);
+  transform: translateX(calc(var(--ry) * -1.2));
+  transition: transform 0.5s ease, opacity 0.9s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.in .shadow {
+  opacity: 1;
+}
+
+@keyframes float {
+  50% {
+    transform: translateY(-6px) rotateZ(-0.4deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .face {
+    grid-template-columns: 1fr;
+  }
+
+  .main {
+    padding: 34px 22px 26px;
+  }
+
+  .stub {
+    padding: 28px 22px 26px;
+    background-size: 9px 3px;
+    background-repeat: repeat-x;
+    background-position: 4px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float {
+    animation: none;
+  }
+
+  .ticket,
+  .in .ticket {
+    transition: none;
+    opacity: 1;
+    translate: none;
+    rotate: none;
+  }
+}

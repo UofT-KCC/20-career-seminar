@@ -1,0 +1,208 @@
+.program {
+  padding: 0 24px;
+}
+
+.intro {
+  text-align: center;
+  padding: 24px 0 40px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-display), serif;
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--gold);
+}
+
+.eyebrow::before,
+.eyebrow::after {
+  content: "";
+  width: 28px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+.heading {
+  font-family: var(--font-serif), serif;
+  font-size: clamp(1.6rem, 4.6vw, 2.1rem);
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink-deep);
+  margin-top: 10px;
+}
+
+/* ---------- Parts 1–2: an editorial list, hairline rules, gold numerals ---------- */
+
+.parts {
+  list-style: none;
+  max-width: 680px;
+  margin: 0 auto;
+  border-bottom: 1px solid rgba(22, 52, 92, 0.12);
+}
+
+.part {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 8px;
+  padding: 36px 0 38px;
+  border-top: 1px solid rgba(22, 52, 92, 0.12);
+}
+
+.num {
+  font-family: var(--font-display), serif;
+  font-style: italic;
+  font-size: 2.6rem;
+  line-height: 1;
+  color: var(--gold);
+}
+
+.kind {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: #8a6a35;
+}
+
+.title {
+  font-family: var(--font-serif), serif;
+  font-weight: 700;
+  font-size: clamp(1.3rem, 3.6vw, 1.55rem);
+  line-height: 1.4;
+  color: var(--ink-deep);
+  margin-top: 8px;
+}
+
+.desc {
+  font-size: 0.98rem;
+  line-height: 1.85;
+  color: #5c6475;
+  margin-top: 10px;
+}
+
+.desc strong {
+  color: var(--ink-deep);
+  font-weight: 700;
+}
+
+.pickLabel {
+  margin-top: 22px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ink-deep);
+}
+
+.tracks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.track {
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(22, 52, 92, 0.22);
+  font-size: 0.9rem;
+  color: var(--ink-deep);
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.track:hover {
+  border-color: var(--ink-deep);
+}
+
+.trackOn,
+.trackOn:hover {
+  background: var(--ink-deep);
+  border-color: var(--ink-deep);
+  color: var(--paper);
+}
+
+@media (max-width: 520px) {
+  .part {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .num {
+    font-size: 2.2rem;
+  }
+}
+
+/* ---------- Part 3: the radio, set free on the page ---------- */
+
+.radio {
+  margin: 48px -24px 0;
+  text-align: center;
+}
+
+.radioCanvas {
+  display: block;
+  width: min(100%, 1080px);
+  aspect-ratio: 16 / 9;
+  margin: 0 auto;
+  /* a faint pool of light under the set */
+  background: radial-gradient(48% 42% at 50% 58%, rgba(27, 79, 176, 0.07), transparent 70%);
+}
+
+.radioText {
+  max-width: 520px;
+  margin: -8px auto 0;
+  padding: 0 24px;
+}
+
+.numInline {
+  font-family: var(--font-display), serif;
+  font-style: italic;
+  font-size: 1rem;
+  letter-spacing: 0;
+  color: var(--gold);
+  margin-right: 6px;
+}
+
+.radioTitle {
+  font-family: var(--font-serif), serif;
+  font-weight: 700;
+  font-size: clamp(1.8rem, 5vw, 2.4rem);
+  line-height: 1.3;
+  color: var(--ink-deep);
+  margin-top: 10px;
+}
+
+.storyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 26px;
+  padding: 15px 30px;
+  border-radius: 999px;
+  background: var(--ink-deep);
+  color: var(--paper);
+  font-weight: 600;
+  font-size: 0.98rem;
+  transition: background 0.2s ease, gap 0.2s ease;
+}
+
+.storyBtn:hover {
+  background: var(--ink);
+  gap: 14px;
+}
+
+.deadline {
+  margin-top: 14px;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  color: #8a8478;
+}
+
+@media (max-width: 640px) {
+  .radioCanvas {
+    aspect-ratio: 5 / 4;
+  }
+}

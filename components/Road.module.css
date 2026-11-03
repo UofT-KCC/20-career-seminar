@@ -1,0 +1,65 @@
+/* ---------- straight road ---------- */
+
+.line {
+  position: relative;
+  width: 1.5px;
+  margin: 0 auto;
+}
+
+.lineInk {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  background: var(--ink);
+  transform: scaleY(0);
+  transform-origin: top;
+}
+
+.dot {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  transform: translateX(-50%);
+}
+
+/* Margin note to the right of the road, like an annotation on a map. */
+.note {
+  position: absolute;
+  top: 50%;
+  left: 18px;
+  width: min(42vw, 240px);
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--muted);
+  opacity: 0;
+  transform: translate(-6px, -50%);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.note::before {
+  content: "";
+  position: absolute;
+  left: -12px;
+  top: 0.75em;
+  width: 6px;
+  height: 1.5px;
+  background: var(--gold);
+}
+
+.noteShown {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .path,
+  .sign,
+  .note {
+    transition: none;
+  }
+}
