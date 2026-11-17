@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import {
   DEST_Z,
   ENV_W,
@@ -15,7 +16,8 @@ import {
 import { cameraAt, fovAt, smoother, type Shot, type Steer } from "./camera";
 import { buildNetwork, type Path } from "./network";
 import { buildSeal, buildSignpost, cssFont, radialTexture } from "./props";
-import { buildSketches, roadside, setSketchResolution } from "./sketch";
+import { buildRoadside, roadside } from "./roadside";
+import { HINGE_V, SEALED_SHIFT, buildEnvelopeOpening } from "./envelope";
 import { HORIZON, buildSky } from "./sky";
 import { buildCloudPuffs, cloudSea } from "./clouds";
 import { buildSlab, buildStitches, withReveal } from "./road";
@@ -46,11 +48,17 @@ export function createCrossroadScene(canvas: HTMLCanvasElement, forkOptions: [st
   let aspect = 1;
 
   // ---------- light ----------
-  // a clear morning: cool sky fill, warm low sun
-  scene.add(new THREE.HemisphereLight(0xdcecff, 0xc8d6e8, 1.35));
-  const sun = new THREE.DirectionalLight(0xfff0d6, 2.5);
+  // a clear morning: cool sky fill, warm low sun, and a soft studio
+  // environment so metal, glass and lacquer have something to reflect
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  pmrem.dispose();
+  scene.environment = env;
+  scene.environmentIntensity = 0.45;
+  scene.add(new THREE.HemisphereLight(0xdcecff, 0xc8d6e8, 1.0));
+  const sun = new THREE.DirectionalLight(0xfff0d6, 2.6);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(3072, 3072);
   sun.shadow.camera.left = -12;
   sun.shadow.camera.right = 12;
   sun.shadow.camera.top = 12;
@@ -103,17 +111,22 @@ export function createCrossroadScene(canvas: HTMLCanvasElement, forkOptions: [st
   const sealFace = new THREE.Mesh(plane, imageMat("/images/envelope-front1.png"));
   sealFace.rotation.x = Math.PI / 2;
   sealHolder.add(sealFace);
+  // the sealed sheet stays on top while it dissolves into the 3D flap and wax beneath
+  for (const face of [addressFace, sealFace]) {
+    face.renderOrder = 10;
+    (face.material as THREE.MeshBasicMaterial).depthTest = false;
+  }
   flipper.add(addressFace, sealHolder);
   flipper.position.y = 0.01;
   scene.add(flipper);
 
   const opened = new THREE.Group();
   opened.rotation.y = Math.PI;
-  // Inside of the envelope only: the opened flap (v < 0.4025) is cut away so
-  // the road reads as coming straight out of the pocket.
+  // Inside of the envelope only: the flap above the fold is cut away here and
+  // drawn as its own hinged sheet.
   const interiorMat = imageMat("/images/envelope-open.png");
   interiorMat.onBeforeCompile = (shader) => {
-    shader.fragmentShader = shader.fragmentShader.replace("void main() {", "void main() {\n  if (vMapUv.y > 0.597) discard;");
+    shader.fragmentShader = shader.fragmentShader.replace("void main() {", `void main() {\n  if (vMapUv.y > ${HINGE_V.toFixed(3)}) discard;`);
   };
   interiorMat.customProgramCacheKey = () => "envelope-interior";
   const interior = new THREE.Mesh(plane, interiorMat);
@@ -127,7 +140,8 @@ export function createCrossroadScene(canvas: HTMLCanvasElement, forkOptions: [st
   pocket.rotation.x = -Math.PI / 2;
   pocket.position.y = ROAD_H + 0.02;
   pocket.renderOrder = 5;
-  opened.add(interior, pocket);
+  const opening = buildEnvelopeOpening(interiorMat.map!, "/images/envelope-front1.png");
+  opened.add(interior, pocket, opening.group);
   scene.add(opened);
 
   // ---------- road network ----------
@@ -192,9 +206,9 @@ export function createCrossroadScene(canvas: HTMLCanvasElement, forkOptions: [st
     .catch(() => undefined)
     .then(() => redraws.forEach((r) => r()));
 
-  // ---------- roadside sketches ----------
-  const sketches = buildSketches(roadside());
-  sketches.forEach((s) => scene.add(s.group));
+  // ---------- roadside props ----------
+  const props = buildRoadside(roadside());
+  props.forEach((s) => scene.add(s.group));
 
   // ---------- the paper roll that unrolls the road in the hero ----------
   const rollGeo = new THREE.CylinderGeometry(1, 1, 0.64, 40);
@@ -238,19 +252,23 @@ export function createCrossroadScene(canvas: HTMLCanvasElement, forkOptions: [st
   function update(u: number, time: number, dt: number) {
     const p = Math.min(u / T.hero, 1);
 
-    // 1. flip, 2. open
-    const flip = easeInOut(segment(p, 0.03, 0.2));
+    // 1. flip, settling where the opened art sits
+    const flip = easeInOut(segment(p, 0.03, 0.19));
     flipper.rotation.x = Math.PI * flip;
     flipper.position.y = 0.01 + Math.sin(Math.PI * flip) * 1.3;
-    const open = segment(p, 0.21, 0.27);
-    (addressFace.material as THREE.MeshBasicMaterial).opacity = 1 - open;
-    (sealFace.material as THREE.MeshBasicMaterial).opacity = 1 - open;
-    interiorMat.opacity = open;
-    pocketMat.opacity = open;
-    flipper.visible = open < 1;
+    flipper.position.z = SEALED_SHIFT * flip;
+    // 2. the sealed art gives way to the real flap and wax, which crack and open
+    const landed = flip > 0.98;
+    opened.visible = landed;
+    const gone = opening.update(p);
+    (addressFace.material as THREE.MeshBasicMaterial).opacity = 1 - gone;
+    (sealFace.material as THREE.MeshBasicMaterial).opacity = 1 - gone;
+    interiorMat.opacity = 1;
+    pocketMat.opacity = 1;
+    flipper.visible = gone < 1;
 
     // 3. the road rolls out, then the rest of the network appears for the journey
-    const roll = segment(p, 0.3, 0.86);
+    const roll = segment(p, 0.37, 0.88);
     const swing = segment(u, T.hero, T.hero + T.swing);
     uReveal.value = roll * heroReveal + swing * swing * 400;
     // turn the junction seals with the camera's orbit so they always read upright
@@ -310,12 +328,13 @@ export function createCrossroadScene(canvas: HTMLCanvasElement, forkOptions: [st
     camera.up.copy(shot.up);
     camera.lookAt(shot.target);
 
-    // roadside sketches draw themselves in a little way ahead of the camera
+    // roadside props rise a little way ahead of the camera
     const front = u > T.hero ? shot.target.z + 13 : -Infinity;
     const pace = dt * 0.9;
-    for (const s of sketches) {
+    for (const s of props) {
       const want = THREE.MathUtils.clamp((front - s.z) / 3, 0, 1);
-      if (want !== s.drawn) s.set(s.drawn + THREE.MathUtils.clamp(want - s.drawn, -pace * 2, pace));
+      if (want !== s.shown) s.set(s.shown + THREE.MathUtils.clamp(want - s.shown, -pace * 2, pace));
+      if (s.shown > 0) s.tick?.(time);
     }
 
     // the sun and its shadow follow the focus point; the sky follows the camera
@@ -349,7 +368,6 @@ export function createCrossroadScene(canvas: HTMLCanvasElement, forkOptions: [st
     camera.aspect = aspect;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h, false);
-    setSketchResolution(w, h);
   }
 
   function setChoices(c: Choice[]) {
@@ -367,6 +385,7 @@ export function createCrossroadScene(canvas: HTMLCanvasElement, forkOptions: [st
         m.dispose();
       });
     });
+    env.dispose();
     renderer.dispose();
   }
 

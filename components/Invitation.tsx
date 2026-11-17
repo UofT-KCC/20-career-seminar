@@ -6,7 +6,7 @@ import type { Choice } from "@/lib/scene";
 import CrossroadStage from "./CrossroadStage";
 import Destination from "./Destination";
 import Program from "./Program";
-import RoadLine from "./RoadLine";
+import ZoomDock from "./ZoomDock";
 import styles from "./Invitation.module.css";
 
 export default function Invitation() {
@@ -28,10 +28,10 @@ export default function Invitation() {
           그때의 기준, 그리고 지금 돌아보는 이야기를 나눕니다.
         </p>
         <Program track={track} onTrack={setTrack} />
-        <RoadLine height={140} />
       </section>
 
       <Destination picks={picks} track={track} />
+      <ZoomDock target="zoom" />
     </main>
   );
 }

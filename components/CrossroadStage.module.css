@@ -105,45 +105,111 @@
   text-shadow: 0 1px 14px rgba(255, 255, 255, 0.8);
 }
 
+/* An engraved card: ivory glass in a gold double rule. */
 .card {
   top: max(18px, 4vh);
-  width: min(460px, calc(100vw - 32px));
-  padding: 16px 22px 18px;
-  border: 1px solid rgba(168, 145, 106, 0.4);
-  border-radius: 14px;
-  background: rgba(255, 253, 247, 0.72);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 16px 36px rgba(40, 70, 110, 0.16);
+  width: min(440px, calc(100vw - 32px));
+  padding: 22px 32px 20px;
+  border: 1px solid rgba(168, 145, 106, 0.55);
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(255, 253, 248, 0.9), rgba(250, 245, 234, 0.8));
+  backdrop-filter: blur(16px) saturate(1.15);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 2px 6px rgba(22, 52, 92, 0.06),
+    0 26px 50px -20px rgba(22, 52, 92, 0.38);
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(168, 145, 106, 0.3);
+  border-radius: 3px;
+  pointer-events: none;
 }
 
 .label {
-  font-family: var(--font-display), serif;
-  font-size: 0.74rem;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
   color: #8a6a35;
 }
 
+.labelNum {
+  font-family: var(--font-elegant), serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+}
+
+.labelTopic {
+  font-family: var(--font-fine), serif;
+  font-weight: 500;
+  font-size: 0.72rem;
+  letter-spacing: 0.32em;
+  margin-right: -0.32em;
+  padding-left: 12px;
+  border-left: 1px solid rgba(168, 145, 106, 0.5);
+}
+
 .question {
-  font-family: var(--font-serif), serif;
-  font-weight: 700;
-  font-size: clamp(1.15rem, 4.4vw, 1.45rem);
+  font-family: var(--font-fine), serif;
+  font-weight: 600;
+  font-size: clamp(1.2rem, 4.4vw, 1.55rem);
   line-height: 1.45;
+  letter-spacing: -0.01em;
   color: var(--ink-deep);
-  margin-top: 6px;
+  margin-top: 8px;
+}
+
+/* — ◆ — */
+.rule {
+  display: block;
+  position: relative;
+  width: 112px;
+  height: 7px;
+  margin: 12px auto 0;
+  background: linear-gradient(90deg, transparent, rgba(168, 145, 106, 0.7) 30%, transparent 46%, transparent 54%, rgba(168, 145, 106, 0.7) 70%, transparent) center / 100% 1px no-repeat;
+}
+
+.rule::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  background: #b0935a;
+  transform: translate(-50%, -50%) rotate(45deg);
 }
 
 .cardHint {
   margin-top: 10px;
-  font-size: 0.86rem;
-  line-height: 1.6;
-  color: #5b6b80;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  letter-spacing: 0.02em;
+  color: #66748a;
+}
+
+/* each new line of hint text fades in, so a hover swap reads as a change */
+.cardHint {
+  animation: hintIn 0.28s ease both;
+}
+
+@keyframes hintIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
 }
 
 .cardHint strong {
+  font-family: var(--font-fine), serif;
   color: #8a6a35;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 /* ---- chrome ---- */
@@ -195,7 +261,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hint {
+  .hint,
+  .cardHint {
     animation: none;
   }
 }

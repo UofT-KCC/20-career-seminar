@@ -1,7 +1,6 @@
 "use client";
 
-import { LINKS, STORY_DEADLINE, TRACKS, type Track } from "@/lib/event";
-import Radio3D from "./Radio3D";
+import { TRACKS, type Track } from "@/lib/event";
 import styles from "./Program.module.css";
 
 type Props = {
@@ -63,28 +62,6 @@ export default function Program({ track, onTrack }: Props) {
           </div>
         </li>
       </ol>
-
-      <article className={styles.radio} aria-labelledby="radio-title">
-        <Radio3D />
-        <div className={styles.radioText}>
-          <p className={styles.kind}>
-            <span className={styles.numInline}>03</span> Radio
-          </p>
-          <h3 id="radio-title" className={styles.radioTitle}>
-            갈림길 라디오
-          </h3>
-          <p className={styles.desc}>
-            여러분의 익명 고민 사연에 선배님들이
-            <br />
-            <strong>&ldquo;나라면 이렇게 한다&rdquo;</strong>로 답해드립니다.
-          </p>
-          <a className={styles.storyBtn} href={LINKS.story} target="_blank" rel="noreferrer">
-            익명 사연 보내기
-            <span aria-hidden="true">→</span>
-          </a>
-          <p className={styles.deadline}>사연 마감 · {STORY_DEADLINE}</p>
-        </div>
-      </article>
     </section>
   );
 }

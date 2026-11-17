@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FORKS } from "@/lib/event";
 import { END_START, FORK_COUNT, T, TOTAL, forkStart } from "@/lib/scene/constants";
 import { createCrossroadScene, type Choice } from "@/lib/scene";
@@ -25,6 +25,11 @@ export default function CrossroadStage({ choices, onChoose }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
   const fadeRef = useRef<HTMLDivElement>(null);
   const hintRef = useRef<HTMLDivElement>(null);
+  /** The sign under the pointer, mirrored into React only when it changes. */
+  const [hover, setHover] = useState<{ fork: number; option: 0 | 1 } | null>(null);
+  const hoverRef = useRef(hover);
+  /** Last pointer position on the canvas, so hover follows the camera too. */
+  const pointerRef = useRef<{ x: number; y: number } | null>(null);
   const sceneRef = useRef<ReturnType<typeof createCrossroadScene> | null>(null);
   const uRef = useRef(0);
   const chooseRef = useRef(onChoose);
@@ -93,6 +98,16 @@ export default function CrossroadStage({ choices, onChoose }: Props) {
       set(endRef.current, window4(u, END_START + 0.3, END_START + 0.7, TOTAL - 0.75, TOTAL - 0.45));
       if (fadeRef.current) fadeRef.current.style.opacity = String(segment(u, TOTAL - 0.55, TOTAL - 0.05));
       hintRef.current?.classList.toggle(styles.hidden, u > 0.05);
+
+      // Re-pick every frame: the signs move under a still pointer while riding.
+      const pt = pointerRef.current;
+      const hit = pt && !glideRef.current ? scene.pick(pt.x, pt.y, u) : null;
+      canvas.style.cursor = hit ? "pointer" : "";
+      const was = hoverRef.current;
+      if (hit?.fork !== was?.fork || hit?.option !== was?.option) {
+        hoverRef.current = hit ? { ...hit } : null;
+        setHover(hoverRef.current);
+      }
     };
 
     const io = new IntersectionObserver(([entry]) => {
@@ -105,13 +120,20 @@ export default function CrossroadStage({ choices, onChoose }: Props) {
       return scene.pick(e.clientX - r.left, e.clientY - r.top, uRef.current);
     };
     const onMove = (e: PointerEvent) => {
-      canvas.style.cursor = point(e) ? "pointer" : "";
+      // touch has no hover: a tap chooses straight away
+      if (e.pointerType !== "mouse") return;
+      const r = canvas.getBoundingClientRect();
+      pointerRef.current = { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+    const onLeave = () => {
+      pointerRef.current = null;
     };
     const onClick = (e: PointerEvent) => {
       const hit = point(e);
       if (hit) chooseRef.current(hit.fork, hit.option);
     };
     canvas.addEventListener("pointermove", onMove);
+    canvas.addEventListener("pointerleave", onLeave);
     canvas.addEventListener("pointerup", onClick);
 
     // A deliberate scroll takes over from an automatic glide. Trackpad
@@ -135,6 +157,7 @@ export default function CrossroadStage({ choices, onChoose }: Props) {
       io.disconnect();
       window.removeEventListener("resize", resize);
       canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerleave", onLeave);
       canvas.removeEventListener("pointerup", onClick);
       window.removeEventListener("wheel", onWheel);
       window.removeEventListener("touchstart", cancelGlide);
@@ -199,10 +222,19 @@ export default function CrossroadStage({ choices, onChoose }: Props) {
             }}
             className={`${styles.overlay} ${styles.card}`}
           >
-            <p className={styles.label}>{fork.label}</p>
+            <p className={styles.label}>
+              <span className={styles.labelNum}>No. {String(k + 1).padStart(2, "0")}</span>
+              <span className={styles.labelTopic}>{fork.label.split(" · ")[1]}</span>
+            </p>
             <h3 className={styles.question}>{fork.question}</h3>
-            <p className={styles.cardHint}>
-              {choices[k] === null ? (
+            <span className={styles.rule} aria-hidden="true" />
+            {/* hovering a sign previews it here; otherwise the prompt, or the choice's echo */}
+            <p className={styles.cardHint} key={hover?.fork === k ? hover.option : "rest"}>
+              {hover?.fork === k ? (
+                <>
+                  <strong>{fork.options[hover.option]}</strong> — {fork.details[hover.option]}
+                </>
+              ) : choices[k] === null ? (
                 "표지판을 눌러 길을 골라보세요"
               ) : (
                 <>
@@ -219,7 +251,7 @@ export default function CrossroadStage({ choices, onChoose }: Props) {
             <div key={fork.id} role="group" aria-label={fork.question}>
               {fork.options.map((opt, i) => (
                 <button key={opt} type="button" aria-pressed={choices[k] === i} onClick={() => choose(k, i as 0 | 1)}>
-                  {opt}
+                  {opt} — {fork.details[i]}
                 </button>
               ))}
             </div>

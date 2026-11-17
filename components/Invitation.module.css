@@ -1,6 +1,6 @@
 .letter {
   background: var(--paper);
-  padding-top: 56px;
+  padding: 56px 0 24px;
 }
 
 .body {

@@ -1,11 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { Gowun_Batang, Noto_Sans_KR, Playfair_Display, Song_Myung } from "next/font/google";
+import { Cormorant_Garamond, Gowun_Batang, Noto_Sans_KR, Noto_Serif_KR, Playfair_Display, Song_Myung } from "next/font/google";
 import "./globals.css";
 
 const display = Playfair_Display({
   subsets: ["latin"],
   weight: ["500", "600"],
   variable: "--font-display",
+});
+
+// Fine old-style serif for the formal English lines on the 선배님 invitation.
+const elegant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-elegant",
 });
 
 // Brush-stroke myeongjo for the hand-lettered accents.
@@ -26,6 +34,13 @@ const serif = Gowun_Batang({
   variable: "--font-serif",
 });
 
+// Crisp, high-contrast myeongjo for the questions on the road.
+const fine = Noto_Serif_KR({
+  weight: ["500", "600", "700"],
+  preload: false,
+  variable: "--font-fine",
+});
+
 export const metadata: Metadata = {
   title: "Crossroad · UTKCC Career Seminar 2026",
   description:
@@ -40,7 +55,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="ko"
-      className={`${display.variable} ${accent.variable} ${sans.variable} ${serif.variable}`}
+      className={`${display.variable} ${elegant.variable} ${accent.variable} ${sans.variable} ${serif.variable} ${fine.variable}`}
     >
       <body>{children}</body>
     </html>
