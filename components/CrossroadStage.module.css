@@ -18,6 +18,36 @@
   touch-action: pan-y;
 }
 
+/* The envelope as a plain image, matching the first 3D frame, until the scene is ready. */
+.still {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  height: auto;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.stillGone {
+  opacity: 0;
+}
+
+.settle {
+  position: absolute;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+/* the page snaps loosely to these on touch screens (see globals.css) */
+@media (pointer: coarse) {
+  .settle {
+    scroll-snap-align: start;
+  }
+}
+
 /* Overlays are driven from the animation loop (opacity / visibility / translate). */
 .overlay {
   position: absolute;

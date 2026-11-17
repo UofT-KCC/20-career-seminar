@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FORKS } from "@/lib/event";
-import { END_START, FORK_COUNT, T, TOTAL, forkStart } from "@/lib/scene/constants";
+import { END_START, ENV_W, FORK_COUNT, IMG_W, T, TOTAL, forkStart } from "@/lib/scene/constants";
 import { createCrossroadScene, type Choice } from "@/lib/scene";
 import { segment } from "@/lib/useScrollProgress";
 import styles from "./CrossroadStage.module.css";
@@ -11,6 +11,12 @@ type Props = {
   choices: Choice[];
   onChoose: (fork: number, option: 0 | 1) => void;
 };
+
+/** Where the camera stands square to each fork's signs: the ride after a choice stops here, and touch scrolling settles here. */
+const CHOOSE_AT = Array.from({ length: FORK_COUNT }, (_, k) => forkStart(k) + T.dwell * 0.7);
+
+/** The opening frame fits the envelope to 62% of the width; its image is this much of the screen's width. */
+const STILL_WIDTH = `${((0.62 * IMG_W) / ENV_W) * 100}%`;
 
 /** in → hold → out, as an opacity. */
 const window4 = (u: number, a: number, b: number, c: number, d: number) =>
@@ -25,6 +31,7 @@ export default function CrossroadStage({ choices, onChoose }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
   const fadeRef = useRef<HTMLDivElement>(null);
   const hintRef = useRef<HTMLDivElement>(null);
+  const stillRef = useRef<HTMLImageElement>(null);
   /** The sign under the pointer, mirrored into React only when it changes. */
   const [hover, setHover] = useState<{ fork: number; option: 0 | 1 } | null>(null);
   const hoverRef = useRef(hover);
@@ -33,8 +40,8 @@ export default function CrossroadStage({ choices, onChoose }: Props) {
   const sceneRef = useRef<ReturnType<typeof createCrossroadScene> | null>(null);
   const uRef = useRef(0);
   const chooseRef = useRef(onChoose);
-  /** An automatic ride to the next fork, in scroll units, driven by the render loop. */
-  const glideRef = useRef<{ from: number; to: number; t0: number; dur: number } | null>(null);
+  /** Set while the page rides on to the next fork after a choice: the camera follows more softly. */
+  const ridingRef = useRef(false);
 
   useEffect(() => {
     sceneRef.current?.setChoices(choices);
@@ -53,32 +60,55 @@ export default function CrossroadStage({ choices, onChoose }: Props) {
     resize();
     window.addEventListener("resize", resize);
 
+    // The page opens on a still of the envelope, sized to match the first 3D
+    // frame exactly; it gives way once the scene has its art and has drawn.
+    let ready = false;
+    scene.ready.then(() =>
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          ready = true;
+          stillRef.current?.classList.add(styles.stillGone);
+        }),
+      ),
+    );
+
     const start = performance.now();
     let last = start;
     const scrollU = () => Math.max(0, Math.min(TOTAL, -section.getBoundingClientRect().top / window.innerHeight));
-    // The scene follows the scroll position through a soft spring, so wheel
-    // notches and flicks become one continuous glide.
+    // The scene follows the scroll position through a critically damped spring
+    // with a speed limit: a notch, a slow drag and a hard flick all become one
+    // even glide, never a jump. The page itself is never moved from here, so
+    // the scene can't pull against a finger.
     let u = scrollU();
+    let vel = 0;
     const frame = () => {
       const now = performance.now();
       const dt = Math.min((now - last) / 1000, 0.1);
       last = now;
-      const glide = glideRef.current;
-      if (glide) {
-        // Ride on one eased curve, frame-locked to the camera, and bring the
-        // page along so the scroll position agrees when the ride ends.
-        const t = Math.min(1, Math.max(0, (now - glide.t0) / glide.dur));
-        // half sine, half ease-out: it pulls away at once, then settles softly
-        const e = 0.5 * (0.5 - 0.5 * Math.cos(Math.PI * t)) + 0.5 * (1 - (1 - t) * (1 - t));
-        u = glide.from + (glide.to - glide.from) * e;
-        window.scrollTo({ top: section.offsetTop + u * window.innerHeight, behavior: "instant" });
-        if (t >= 1) glideRef.current = null;
+      const target = scrollU();
+      if (still) {
+        u = target;
+        vel = 0;
       } else {
-        const target = scrollU();
-        // a long jump (reload, End key) skips ahead and only glides the last screen
-        if (Math.abs(target - u) > 2) u = target - Math.sign(target - u);
-        u = still ? target : u + (target - u) * (1 - Math.exp(-dt * 3.2));
-        if (Math.abs(target - u) < 1e-4) u = target;
+        // a long jump (reload, End key) skips ahead and only rides the last screen
+        if (Math.abs(target - u) > 6) {
+          u = target - Math.sign(target - u);
+          vel = 0;
+        }
+        const riding = ridingRef.current;
+        const w = riding ? 2.4 : 5;
+        const vmax = riding ? 2.2 : 3.2;
+        for (let left = dt; left > 0; left -= 1 / 120) {
+          const h = Math.min(left, 1 / 120);
+          vel += (w * w * (target - u) - 2 * w * vel) * h;
+          vel = Math.max(-vmax, Math.min(vmax, vel));
+          u += vel * h;
+        }
+        if (Math.abs(target - u) < 1e-4 && Math.abs(vel) < 1e-3) {
+          u = target;
+          vel = 0;
+        }
+        if (riding && Math.abs(target - u) < 0.02) ridingRef.current = false;
       }
       uRef.current = u;
       scene.update(u, still ? 0 : (now - start) / 1000, dt);
@@ -93,15 +123,17 @@ export default function CrossroadStage({ choices, onChoose }: Props) {
       set(introRef.current, window4(u, T.hero + 0.45, T.hero + 0.85, forkStart(0) - 0.45, forkStart(0) - 0.1));
       cardRefs.current.forEach((el, k) => {
         const s = forkStart(k);
-        set(el, window4(u, s - 0.3, s + 0.05, s + T.dwell + 0.05, s + T.dwell + 0.4), -10);
+        set(el, window4(u, s - 0.3, s + 0.05, s + T.dwell + 0.45, s + T.dwell + 0.85), -10);
       });
       set(endRef.current, window4(u, END_START + 0.3, END_START + 0.7, TOTAL - 0.75, TOTAL - 0.45));
       if (fadeRef.current) fadeRef.current.style.opacity = String(segment(u, TOTAL - 0.55, TOTAL - 0.05));
       hintRef.current?.classList.toggle(styles.hidden, u > 0.05);
+      // if the art is slow to arrive, never let the still sit over a scene that has moved on
+      if (!ready && u > 0.15) stillRef.current?.classList.add(styles.stillGone);
 
       // Re-pick every frame: the signs move under a still pointer while riding.
       const pt = pointerRef.current;
-      const hit = pt && !glideRef.current ? scene.pick(pt.x, pt.y, u) : null;
+      const hit = pt && !ridingRef.current ? scene.pick(pt.x, pt.y, u) : null;
       canvas.style.cursor = hit ? "pointer" : "";
       const was = hoverRef.current;
       if (hit?.fork !== was?.fork || hit?.option !== was?.option) {
@@ -117,7 +149,7 @@ export default function CrossroadStage({ choices, onChoose }: Props) {
 
     const point = (e: PointerEvent) => {
       const r = canvas.getBoundingClientRect();
-      return scene.pick(e.clientX - r.left, e.clientY - r.top, uRef.current);
+      return scene.pick(e.clientX - r.left, e.clientY - r.top, uRef.current, e.pointerType !== "mouse");
     };
     const onMove = (e: PointerEvent) => {
       // touch has no hover: a tap chooses straight away
@@ -136,21 +168,17 @@ export default function CrossroadStage({ choices, onChoose }: Props) {
     canvas.addEventListener("pointerleave", onLeave);
     canvas.addEventListener("pointerup", onClick);
 
-    // A deliberate scroll takes over from an automatic glide. Trackpad
-    // momentum still trickling in from before the click does not count.
-    const cancelGlide = () => {
-      glideRef.current = null;
+    // Taking the scroll back ends the softer ride-along; the browser stops its
+    // own smooth scroll on its own.
+    const cancelRide = () => {
+      ridingRef.current = false;
     };
     const SCROLL_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "]);
-    const onWheel = (e: WheelEvent) => {
-      const g = glideRef.current;
-      if (g && performance.now() - g.t0 > 400 && Math.abs(e.deltaY) > 12) cancelGlide();
-    };
     const onKey = (e: KeyboardEvent) => {
-      if (SCROLL_KEYS.has(e.key)) cancelGlide();
+      if (SCROLL_KEYS.has(e.key)) cancelRide();
     };
-    window.addEventListener("wheel", onWheel, { passive: true });
-    window.addEventListener("touchstart", cancelGlide, { passive: true });
+    window.addEventListener("wheel", cancelRide, { passive: true });
+    window.addEventListener("touchstart", cancelRide, { passive: true });
     window.addEventListener("keydown", onKey);
 
     return () => {
@@ -159,29 +187,28 @@ export default function CrossroadStage({ choices, onChoose }: Props) {
       canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerleave", onLeave);
       canvas.removeEventListener("pointerup", onClick);
-      window.removeEventListener("wheel", onWheel);
-      window.removeEventListener("touchstart", cancelGlide);
+      window.removeEventListener("wheel", cancelRide);
+      window.removeEventListener("touchstart", cancelRide);
       window.removeEventListener("keydown", onKey);
-      cancelGlide();
+      cancelRide();
       scene.dispose();
       sceneRef.current = null;
     };
   }, []);
 
-  /** After a choice, ride down the chosen path to the next fork. */
+  /**
+   * After a choice, ride down the chosen path to the next fork. The browser
+   * scrolls the page there smoothly and the camera follows it softly, so a
+   * finger can take over at any point without the scene snapping back.
+   */
   const choose = (k: number, option: 0 | 1) => {
     onChoose(k, option);
-    const from = uRef.current;
+    const section = sectionRef.current;
     // ride on until the next signpost stands square in frame, ready to choose again
-    const to = k + 1 < FORK_COUNT ? forkStart(k + 1) + T.dwell * 0.7 : END_START + 1;
-    if (to <= from || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    glideRef.current = {
-      from,
-      to,
-      // a brief beat for the chosen sign to light, then ~0.8s per screen
-      t0: performance.now() + 120,
-      dur: Math.min(4200, Math.max(2200, (to - from) * 800)),
-    };
+    const to = k + 1 < FORK_COUNT ? CHOOSE_AT[k + 1] : END_START + 1;
+    if (!section || to <= uRef.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    ridingRef.current = true;
+    window.scrollTo({ top: section.offsetTop + to * window.innerHeight, behavior: "smooth" });
   };
   useEffect(() => {
     chooseRef.current = choose;
@@ -194,8 +221,21 @@ export default function CrossroadStage({ choices, onChoose }: Props) {
       style={{ height: `${(TOTAL + 1) * 100}vh` }}
       aria-label="Crossroad, 갈림길에서"
     >
+      {/* on touch screens the page settles at each fork, so a flick doesn't sail past the signs */}
+      {CHOOSE_AT.map((at) => (
+        <span key={at} className={styles.settle} style={{ top: `${at * 100}vh` }} aria-hidden="true" />
+      ))}
       <div className={styles.sticky}>
         <canvas ref={canvasRef} className={styles.canvas} aria-hidden="true" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          ref={stillRef}
+          className={styles.still}
+          src="/images/envelope-back.png"
+          alt=""
+          style={{ width: STILL_WIDTH }}
+          fetchPriority="high"
+        />
 
         <div ref={titleRef} className={`${styles.overlay} ${styles.title}`}>
           <p className={styles.badge}>UTKCC Career Seminar 2026</p>

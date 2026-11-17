@@ -24,6 +24,13 @@ body {
   overflow-x: clip;
 }
 
+/* on touch screens a flick settles at each fork's signpost instead of sailing past */
+@media (pointer: coarse) {
+  html {
+    scroll-snap-type: y proximity;
+  }
+}
+
 body {
   font-family: var(--font-sans), system-ui, -apple-system, "Apple SD Gothic Neo",
     sans-serif;

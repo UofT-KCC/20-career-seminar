@@ -29,7 +29,7 @@ export const SIGN_DZ = 1.9;
  *   per fork: dwell (signs up, choose) then travel (follow the chosen path)
  *   end    rise over the destination seal and fade to paper
  */
-export const T = { hero: 6, swing: 2.4, dwell: 1.3, travel: 3.2, end: 2 };
+export const T = { hero: 6, swing: 2.4, dwell: 1.6, travel: 3.2, end: 2 };
 export const forkStart = (k: number) => T.hero + T.swing + k * (T.dwell + T.travel);
 export const END_START = forkStart(FORK_COUNT);
 export const TOTAL = END_START + T.end;

@@ -25,6 +25,9 @@ import { easeInOut, segment } from "../useScrollProgress";
 
 export type Choice = 0 | 1 | null;
 
+/** 0 → 1 with a small overshoot, for things that pop into place. */
+const popOut = (t: number) => 1 + 2.4 * (t - 1) ** 3 + 1.4 * (t - 1) ** 2;
+
 /** Option 0 rides the +x side of a fork, option 1 the -x side. */
 const sideOf = (c: Choice) => (c === 0 ? 1 : c === 1 ? -1 : 0);
 
@@ -83,8 +86,12 @@ export function createCrossroadScene(canvas: HTMLCanvasElement, forkOptions: [st
 
   // ---------- envelope (last year's art, as image planes) ----------
   const loader = new THREE.TextureLoader();
+  // the envelope art the first frame needs; the page shows a still of it until these arrive
+  const loading: Promise<void>[] = [];
   const load = (src: string) => {
-    const t = loader.load(src);
+    let done = () => {};
+    loading.push(new Promise<void>((resolve) => (done = resolve)));
+    const t = loader.load(src, () => done(), undefined, () => done());
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = renderer.capabilities.getMaxAnisotropy();
     return t;
@@ -195,6 +202,8 @@ export function createCrossroadScene(canvas: HTMLCanvasElement, forkOptions: [st
     return s;
   });
 
+  const ready = Promise.all(loading).then(() => undefined);
+
   // Redraw canvas text once the web fonts have actually loaded.
   const serif = cssFont("--font-serif", "serif");
   const display = cssFont("--font-display", "serif");
@@ -244,7 +253,8 @@ export function createCrossroadScene(canvas: HTMLCanvasElement, forkOptions: [st
   function activeFork(u: number) {
     for (let k = 0; k < FORK_COUNT; k++) {
       const s = forkStart(k);
-      if (u > s - 0.35 && u < s + T.dwell + 0.25) return k;
+      // the signs stay up a while after the camera leaves, so a late tap still counts
+      if (u > s - 0.35 && u < s + T.dwell + 0.8) return k;
     }
     return -1;
   }
@@ -273,7 +283,14 @@ export function createCrossroadScene(canvas: HTMLCanvasElement, forkOptions: [st
     uReveal.value = roll * heroReveal + swing * swing * 400;
     // turn the junction seals with the camera's orbit so they always read upright
     const turn = Math.PI / 2 - Math.PI * smoother(swing);
-    seals.forEach((m) => (m.rotation.y = turn));
+    seals.forEach((m, k) => {
+      m.rotation.y = turn;
+      // each junction seal pops up as the unrolling road reaches it, not before
+      const at = k === 0 ? trunkLen - 0.4 : junctionZ(k) - junctionZ(0) + trunkLen;
+      const s = THREE.MathUtils.clamp((uReveal.value - at) / 0.7, 0, 1);
+      m.visible = s > 0;
+      m.scale.setScalar(Math.max(popOut(s), 0.0001));
+    });
     rolls.forEach((m) => (m.visible = false));
     if (roll > 0 && roll < 1) {
       const d = roll * heroReveal;
@@ -350,15 +367,35 @@ export function createCrossroadScene(canvas: HTMLCanvasElement, forkOptions: [st
 
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
+  const box = new THREE.Box3();
+  const mid = new THREE.Vector3();
 
-  /** The sign board under a canvas-relative point, for the active fork. */
-  function pick(x: number, y: number, u: number) {
+  /**
+   * The sign board under a canvas-relative point, for the active fork. A
+   * fingertip is broad, so with `loose` a tap that misses both boards still
+   * takes the nearer one if it lands close by.
+   */
+  function pick(x: number, y: number, u: number, loose = false) {
     const k = activeFork(u);
     if (k < 0 || !posts[k].group.visible) return (hovered = null);
-    ndc.set((x / canvas.clientWidth) * 2 - 1, -(y / canvas.clientHeight) * 2 + 1);
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    ndc.set((x / w) * 2 - 1, -(y / h) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
     const hit = raycaster.intersectObjects(posts[k].pickables, true)[0];
-    const option = hit?.object.userData.option as 0 | 1 | undefined;
+    let option = hit?.object.userData.option as 0 | 1 | undefined;
+    if (option === undefined && loose) {
+      let best = Math.min(w, h) * 0.2;
+      for (const b of posts[k].pickables) {
+        box.setFromObject(b).getCenter(mid).project(camera);
+        if (mid.z < -1 || mid.z > 1) continue;
+        const d = Math.hypot(((mid.x - ndc.x) * w) / 2, ((mid.y - ndc.y) * h) / 2);
+        if (d < best) {
+          best = d;
+          option = b.userData.option;
+        }
+      }
+    }
     hovered = option === undefined ? null : { fork: k, option };
     return hovered;
   }
@@ -389,5 +426,5 @@ export function createCrossroadScene(canvas: HTMLCanvasElement, forkOptions: [st
     renderer.dispose();
   }
 
-  return { renderer, update, resize, pick, setChoices, activeFork, dispose, junction: J0 };
+  return { renderer, ready, update, resize, pick, setChoices, activeFork, dispose, junction: J0 };
 }
